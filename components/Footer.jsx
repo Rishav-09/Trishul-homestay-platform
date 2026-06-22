@@ -53,6 +53,9 @@ export default function Footer() {
                 <Link href="/attractions" className="hover:text-emerald-400 transition-colors">Local Attractions</Link>
               </li>
               <li>
+                <Link href="/about" className="hover:text-emerald-400 transition-colors">About Us</Link>
+              </li>
+              <li>
                 <Link href="/contact" className="hover:text-emerald-400 transition-colors">Get in Touch</Link>
               </li>
               <li>

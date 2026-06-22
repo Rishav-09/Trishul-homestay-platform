@@ -10,7 +10,7 @@ export default function AiPlanner() {
       id: "m-init",
       sender: "bot",
       text: "Namaste! I am the EcoStay AI Assistant. I can design your Himalayan itinerary, suggest trekking paths, or help you understand eco-guidelines. What would you like to know about Chopta?",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: "Just now"
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);

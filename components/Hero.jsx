@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Calendar, Users, MapPin, Search, ArrowRight } from "lucide-react";
+import Button from "@/components/ui/Button";
 
 export default function Hero() {
   const router = useRouter();
@@ -57,19 +58,22 @@ export default function Hero() {
 
         {/* Hero Actions */}
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-16">
-          <Link
+          <Button
             href="/rooms"
-            className="group inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-2xl shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:scale-[1.02]"
+            variant="glow"
+            size="lg"
+            iconRight={<ArrowRight className="h-5 w-5" />}
           >
-            <span>Explore Rooms</span>
-            <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link
+            Explore Rooms
+          </Button>
+          <Button
             href="/attractions"
-            className="px-8 py-4 bg-white/10 hover:bg-white/25 backdrop-blur-md text-white font-semibold rounded-2xl border border-white/20 hover:border-white/40 transition-all duration-300 hover:scale-[1.02]"
+            variant="secondary"
+            size="lg"
+            className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border-white/20 hover:border-white/30"
           >
             Guide to Chopta
-          </Link>
+          </Button>
         </div>
 
         {/* Floating Search Widget (Airbnb / Booking style) */}
@@ -124,13 +128,15 @@ export default function Hero() {
           </div>
 
           {/* Search CTA */}
-          <button
+          <Button
             type="submit"
-            className="w-full md:w-auto px-6 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl flex items-center justify-center gap-2 font-semibold transition-all duration-300 md:ml-auto"
+            variant="primary"
+            size="lg"
+            icon={<Search className="h-5 w-5" />}
+            className="w-full md:w-auto md:ml-auto"
           >
-            <Search className="h-5 w-5" />
-            <span className="md:hidden lg:inline">Find Stays</span>
-          </button>
+            Find Stays
+          </Button>
         </form>
       </div>
     </div>

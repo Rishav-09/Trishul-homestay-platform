@@ -16,6 +16,7 @@ import {
   AlertCircle,
   HelpCircle
 } from "lucide-react";
+import Button from "@/components/ui/Button";
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState([]);
@@ -158,13 +159,14 @@ export default function AdminDashboard() {
             Manage Chopta homestay inventories, approve booking requests, and respond to traveler guide queries.
           </p>
         </div>
-        <button
+        <Button
           onClick={handleResetData}
-          className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors border border-slate-200/50 dark:border-slate-700/50"
+          variant="secondary"
+          size="sm"
+          icon={<RefreshCw className="h-3.5 w-3.5" />}
         >
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Reset Simulation State</span>
-        </button>
+          Reset Simulation State
+        </Button>
       </div>
 
       {/* KPI Cards Grid */}
@@ -250,17 +252,15 @@ export default function AdminDashboard() {
           {/* Internal filters */}
           <div className="flex flex-wrap gap-2">
             {["all", "pending", "approved", "rejected"].map((status) => (
-              <button
+              <Button
                 key={status}
                 onClick={() => setFilterStatus(status)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all ${
-                  filterStatus === status
-                    ? "bg-slate-900 dark:bg-slate-700 text-white"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200"
-                }`}
+                variant={filterStatus === status ? "primary" : "secondary"}
+                size="sm"
+                className="rounded-full px-4 py-1.5 uppercase tracking-wider text-[10px]"
               >
                 {status}
-              </button>
+              </Button>
             ))}
           </div>
 

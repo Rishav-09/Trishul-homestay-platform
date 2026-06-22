@@ -2,15 +2,32 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Leaf, Menu, X, Sun, Moon, LayoutDashboard } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Leaf, Menu, X, Sun, Moon, LayoutDashboard, User, LogOut, ChevronDown } from "lucide-react";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
-  // Load initial theme preference from system/localStorage
+  // Check auth user from localStorage
+  const checkUser = () => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        setUser(null);
+      }
+    } else {
+      setUser(null);
+    }
+  };
+
+  // Load initial theme preference from system/localStorage & setup auth listeners
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -22,7 +39,35 @@ export default function Navbar() {
       setIsDark(false);
       document.documentElement.classList.remove("dark");
     }
+
+    checkUser();
+    window.addEventListener("user-auth", checkUser);
+    window.addEventListener("storage", checkUser);
+
+    return () => {
+      window.removeEventListener("user-auth", checkUser);
+      window.removeEventListener("storage", checkUser);
+    };
   }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (!isProfileOpen) return;
+    const handleDocumentClick = () => {
+      setIsProfileOpen(false);
+    };
+    document.addEventListener("click", handleDocumentClick);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick);
+    };
+  }, [isProfileOpen]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    window.dispatchEvent(new Event("user-auth"));
+    router.push("/");
+  };
 
   // Toggle Theme
   const toggleTheme = () => {
@@ -41,6 +86,7 @@ export default function Navbar() {
     { name: "Home", href: "/" },
     { name: "Rooms", href: "/rooms" },
     { name: "Attractions", href: "/attractions" },
+    { name: "About Us", href: "/about" },
     { name: "Contact", href: "/contact" },
   ];
 
@@ -82,27 +128,82 @@ export default function Navbar() {
 
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800" />
 
-            {/* Actions: Theme & Admin Dashboard */}
+            {/* Actions: Theme & Auth / Admin Dashboard */}
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleTheme}
-                className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors border border-slate-200/50 dark:border-slate-700/50"
+                className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors border border-slate-200/50 dark:border-slate-700/50 cursor-pointer"
                 aria-label="Toggle Theme"
               >
                 {isDark ? <Sun className="h-5 w-5 text-amber-400" /> : <Moon className="h-5 w-5" />}
               </button>
               
-              <Link
-                href="/admin"
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
-                  isActive("/admin")
-                    ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20"
-                    : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/50 dark:border-slate-700/50"
-                }`}
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                <span>Admin Portal</span>
-              </Link>
+              {user ? (
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsProfileOpen(!isProfileOpen);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/50 dark:border-slate-700/50 transition-all duration-300 cursor-pointer"
+                  >
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">
+                        {user.name ? user.name[0].toUpperCase() : "U"}
+                      </div>
+                    )}
+                    <span className="text-sm font-medium max-w-[100px] truncate">{user.name || "User"}</span>
+                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-300 ${isProfileOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  
+                  {isProfileOpen && (
+                    <div className="absolute right-0 mt-2 w-56 glass rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-xl py-2 z-50 animate-fade-in">
+                      <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800/60">
+                        <p className="text-xs text-slate-400 font-medium">Signed in as</p>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{user.email}</p>
+                        {user.isAdmin && (
+                          <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold bg-amber-500/25 text-amber-600 dark:text-amber-400 rounded-md">
+                            Administrator
+                          </span>
+                        )}
+                      </div>
+                      
+                      {user.isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setIsProfileOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-55 dark:hover:bg-slate-800/50 transition-colors"
+                        >
+                          <LayoutDashboard className="h-4 w-4 text-emerald-500" />
+                          <span>Admin Dashboard</span>
+                        </Link>
+                      )}
+                      
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors text-left cursor-pointer font-medium"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Log Out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    isActive("/login")
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+                      : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/50 dark:border-slate-700/50"
+                  }`}
+                >
+                  <User className="h-4 w-4" />
+                  <span>Sign In</span>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -146,14 +247,48 @@ export default function Navbar() {
             </Link>
           ))}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-            <Link
-              href="/admin"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md shadow-emerald-500/20 text-center justify-center transition-colors"
-            >
-              <LayoutDashboard className="h-5 w-5" />
-              <span>Admin Portal Dashboard</span>
-            </Link>
+            {user ? (
+              <div className="space-y-2">
+                <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl mb-2">
+                  <p className="text-xs text-slate-400 font-medium">Logged in as</p>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{user.name} ({user.email})</p>
+                  {user.isAdmin && (
+                    <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold bg-amber-500/25 text-amber-600 dark:text-amber-400 rounded-md">
+                      Administrator
+                    </span>
+                  )}
+                </div>
+                {user.isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md shadow-emerald-500/20 text-center justify-center transition-colors"
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                    <span>Admin Portal Dashboard</span>
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-medium text-center justify-center transition-colors cursor-pointer"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md shadow-emerald-500/20 text-center justify-center transition-colors"
+              >
+                <User className="h-5 w-5" />
+                <span>Sign In</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import AiPlanner from "@/components/AiPlanner";
 import { Phone, Mail, MessageCircle, MapPin, Send, CheckCircle2, UserCheck } from "lucide-react";
+import Button from "@/components/ui/Button";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -169,12 +170,13 @@ export default function Contact() {
                     Thank you. Your enquiry has been saved locally and sent to our team in Chopta. We will contact you via phone/WhatsApp within 2 hours.
                   </p>
                 </div>
-                <button
+                <Button
                   onClick={() => setSubmitted(false)}
-                  className="px-6 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-850 text-white rounded-xl text-xs font-semibold transition-colors"
+                  variant="secondary"
+                  size="md"
                 >
                   Send Another Inquiry
-                </button>
+                </Button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6 text-left">
@@ -252,13 +254,15 @@ export default function Contact() {
                 </div>
 
                 {/* Submit button */}
-                <button
+                <Button
                   type="submit"
-                  className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 hover:scale-[1.01]"
+                  variant="glow"
+                  size="lg"
+                  fullWidth
+                  icon={<Send className="h-4.5 w-4.5" />}
                 >
-                  <Send className="h-4 w-4" />
-                  <span>Send Direct Inquiry</span>
-                </button>
+                  Send Direct Inquiry
+                </Button>
 
                 <span className="text-[10px] text-slate-400 block text-center mt-2">
                   No commissions, direct notifications are saved to local logs synced with the Admin Portal.

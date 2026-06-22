@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import RoomCard from "@/components/RoomCard";
 import BookingModal from "@/components/BookingModal";
 import AiPlanner from "@/components/AiPlanner";
+import Button from "@/components/ui/Button";
 import { rooms } from "@/data/rooms";
 import { Sparkles, Calendar, Coffee, Sun, ThermometerSun, ShieldCheck } from "lucide-react";
 
@@ -64,46 +65,38 @@ function RoomsList() {
 
       {/* Dynamic Filters Bar */}
       <div className="flex flex-wrap items-center justify-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-6">
-        <button
+        <Button
           onClick={() => setFilter("all")}
-          className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
-            filter === "all"
-              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
-              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700"
-          }`}
+          variant={filter === "all" ? "primary" : "secondary"}
+          size="sm"
+          className="rounded-full px-5 py-2.5"
         >
           All Rooms
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => setFilter("budget")}
-          className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
-            filter === "budget"
-              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
-              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700"
-          }`}
+          variant={filter === "budget" ? "primary" : "secondary"}
+          size="sm"
+          className="rounded-full px-5 py-2.5"
         >
           Budget Eco-Rooms (≤ ₹2500)
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => setFilter("premium")}
-          className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
-            filter === "premium"
-              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
-              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700"
-          }`}
+          variant={filter === "premium" ? "primary" : "secondary"}
+          size="sm"
+          className="rounded-full px-5 py-2.5"
         >
           Premium Peak View (₹2500 - ₹4500)
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => setFilter("family")}
-          className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
-            filter === "family"
-              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
-              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700"
-          }`}
+          variant={filter === "family" ? "primary" : "secondary"}
+          size="sm"
+          className="rounded-full px-5 py-2.5"
         >
           Family Cottages (₹5000+)
-        </button>
+        </Button>
       </div>
 
       {/* Search info alert */}

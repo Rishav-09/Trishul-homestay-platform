@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, Calendar, Phone, User, Mail, ShieldAlert, BadgeCheck } from "lucide-react";
+import Button from "@/components/ui/Button";
 
 export default function BookingModal({ isOpen, onClose, room }) {
   const [formData, setFormData] = useState({
@@ -252,12 +253,14 @@ export default function BookingModal({ isOpen, onClose, room }) {
             </div>
 
             {/* CTA Button */}
-            <button
+            <Button
               type="submit"
-              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:scale-[1.01]"
+              variant="glow"
+              size="lg"
+              fullWidth
             >
               Confirm Booking Request
-            </button>
+            </Button>
           </form>
         ) : (
           /* Success Screen */
@@ -280,12 +283,13 @@ export default function BookingModal({ isOpen, onClose, room }) {
               <div className="text-emerald-600 dark:text-emerald-400 font-semibold pt-1">★ Live simulation synced with the Admin Portal.</div>
             </div>
 
-            <button
+            <Button
               onClick={onClose}
-              className="px-8 py-3 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-medium rounded-xl transition-colors"
+              variant="secondary"
+              size="md"
             >
               Close Window
-            </button>
+            </Button>
           </div>
         )}
       </div>

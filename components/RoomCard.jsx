@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Users, Star, ArrowRight, ShieldCheck } from "lucide-react";
+import Button from "@/components/ui/Button";
 
 export default function RoomCard({ image, title, description, price, capacity, rating = 4.7, reviewsCount = 20, amenities = [], onBookNow }) {
   return (
@@ -71,13 +72,14 @@ export default function RoomCard({ image, title, description, price, capacity, r
             </div>
           </div>
 
-          <button
+          <Button
             onClick={onBookNow}
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 hover:bg-emerald-600 dark:bg-slate-800 dark:hover:bg-emerald-500 text-white font-medium text-sm transition-all duration-300 hover:scale-[1.03]"
+            variant="glow"
+            size="md"
+            iconRight={<ArrowRight className="h-4.5 w-4.5" />}
           >
-            <span>Book Now</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
+            Book Now
+          </Button>
         </div>
       </div>
     </div>
