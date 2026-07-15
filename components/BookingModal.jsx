@@ -17,6 +17,8 @@ export default function BookingModal({ isOpen, onClose, room }) {
   const [step, setStep] = useState(1); // 1: Form, 2: Success
   const [nights, setNights] = useState(1);
   const [priceDetails, setPriceDetails] = useState({ base: 0, tax: 0, total: 0 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -29,6 +31,7 @@ export default function BookingModal({ isOpen, onClose, room }) {
         checkOut: "",
         guests: "2",
       });
+      setSubmitError(null);
     }
   }, [isOpen]);
 
@@ -56,12 +59,12 @@ export default function BookingModal({ isOpen, onClose, room }) {
 
   if (!isOpen || !room) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError(null);
 
-    // Create a new simulated booking request
-    const newRequest = {
-      id: "bk-" + Date.now(),
+    const bookingData = {
       guestName: formData.guestName,
       email: formData.email,
       phone: formData.phone,
@@ -72,15 +75,30 @@ export default function BookingModal({ isOpen, onClose, room }) {
       guests: formData.guests,
       nights: nights,
       totalAmount: priceDetails.total,
-      status: "Pending Approval",
-      createdAt: new Date().toLocaleString(),
+      status: "Pending Approval"
     };
 
-    // Store in localStorage so the Admin Dashboard can load it
-    const existing = JSON.parse(localStorage.getItem("bookingRequests") || "[]");
-    localStorage.setItem("bookingRequests", JSON.stringify([newRequest, ...existing]));
-
-    setStep(2);
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(bookingData)
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to submit booking");
+      }
+      
+      setStep(2);
+    } catch (error) {
+      console.error("Booking error:", error);
+      setSubmitError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -252,14 +270,21 @@ export default function BookingModal({ isOpen, onClose, room }) {
               </div>
             </div>
 
+            {submitError && (
+              <div className="p-3 bg-red-500/10 text-red-500 rounded-xl text-xs font-medium border border-red-500/20">
+                {submitError}
+              </div>
+            )}
+
             {/* CTA Button */}
             <Button
               type="submit"
               variant="glow"
               size="lg"
               fullWidth
+              disabled={isSubmitting}
             >
-              Confirm Booking Request
+              {isSubmitting ? "Submitting Request..." : "Confirm Booking Request"}
             </Button>
           </form>
         ) : (

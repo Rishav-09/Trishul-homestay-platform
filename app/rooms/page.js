@@ -14,9 +14,30 @@ function RoomsList() {
   const guestQuery = searchParams.get("guests");
   
   const [filter, setFilter] = useState("all");
-  const [filteredRooms, setFilteredRooms] = useState(rooms);
+  const [allRooms, setAllRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Fetch Rooms from Database API
+  useEffect(() => {
+    async function fetchRooms() {
+      try {
+        const res = await fetch("/api/rooms");
+        if (res.ok) {
+          const data = await res.json();
+          setAllRooms(data);
+          setFilteredRooms(data);
+        }
+      } catch (err) {
+        console.error("Failed to load rooms:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchRooms();
+  }, []);
 
   // Set default filter based on query params if they came from search widget
   useEffect(() => {
@@ -30,21 +51,32 @@ function RoomsList() {
   }, [guestQuery]);
 
   useEffect(() => {
-    let result = rooms;
+    let result = allRooms;
     if (filter === "budget") {
-      result = rooms.filter(r => r.price <= 2500);
+      result = allRooms.filter(r => r.price <= 2500);
     } else if (filter === "premium") {
-      result = rooms.filter(r => r.price > 2500 && r.price < 5000);
+      result = allRooms.filter(r => r.price > 2500 && r.price < 5000);
     } else if (filter === "family") {
-      result = rooms.filter(r => r.price >= 5000);
+      result = allRooms.filter(r => r.price >= 5000);
     }
     setFilteredRooms(result);
-  }, [filter]);
+  }, [filter, allRooms]);
 
   const handleOpenBooking = (room) => {
     setSelectedRoom(room);
     setIsModalOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-sans">
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 border-4 border-emerald-500 border-t-transparent/20 rounded-full animate-spin mx-auto"></div>
+          <p className="text-slate-500 dark:text-slate-400 font-light text-sm animate-pulse">Loading Himalayan homestays...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12 font-sans">

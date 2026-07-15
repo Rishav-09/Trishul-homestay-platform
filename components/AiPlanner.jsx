@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { Sparkles, MessageSquare, X, Send, Bot, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Sparkles, MessageSquare, X, Send, Bot, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function AiPlanner() {
   const [isOpen, setIsOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const [toast, setToast] = useState(null); // { message: string, type: "error" | "success" }
   const [messages, setMessages] = useState([
     {
       id: "m-init",
@@ -15,6 +17,23 @@ export default function AiPlanner() {
   ]);
   const [isTyping, setIsTyping] = useState(false);
 
+  const chatEndRef = useRef(null);
+
+  // Auto-scroll to the bottom when messages or typing state changes
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
+
+  // Handle toast timeout
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   const presetQuestions = [
     { q: "Plan a 3-day Chopta itinerary", id: "itinerary" },
     { q: "What should I pack for Tungnath?", id: "packing" },
@@ -22,35 +41,75 @@ export default function AiPlanner() {
     { q: "Tell me about winter snow levels", id: "winter" }
   ];
 
-  const answers = {
-    itinerary: "Here is your custom 3-Day Eco-Itinerary for Chopta:\n\n• **Day 1: Arrival & Acclimatization**\nArrive at your EcoStay Homestay in Chopta (2,680m). Walk around the rhododendron forest. Dine on traditional 'Gahat Dal' and hot millet rotis.\n\n• **Day 2: Tungnath & Chandrashila Peak**\nStart early at 6 AM. Trek 3.5 km to Tungnath Shiva Temple. Continue 1.5 km to the Chandrashila Summit (4,000m) for a 360° Himalayan views. Return to homestay for hot local herbal tea.\n\n• **Day 3: Deoria Tal Reflection Lake**\nDrive to Sari Village (45 mins), then hike 2.3 km through pine forests to the lake. Watch Chaukhamba reflect in the emerald lake. Depart in afternoon.",
-    packing: "Essential packing guide for Tungnath & Chandrashila:\n\n• **Layering is key:** Windcheater jacket, thermal innerwear, fleece jacket (temperatures dip below 5°C even in summer!).\n• **Footwear:** Waterproof trekking shoes with deep treads.\n• **Eco-kit:** Reusable water bottle (mineral bottles are banned in Chopta meadows) and trash-bag for waste wrappers.\n• **Medical:** Altitude sickness pills, pain sprays, and band-aids.",
-    eco: "EcoStay AI is committed to 100% Sustainable Tourism. Here is how you can help:\n\n1. **Zero Single-Use Plastics:** Carry steel bottles. Refill stations are present at all approved homestays.\n2. **Support Village Economy:** Buy local organic farm produce (Himalayan kidney beans, ghee, wild honey).\n3. **Conserve Resources:** Chopta is off-grid; electricity is solar-powered. Turn off lights, heaters, and charge devices only during daylight.",
-    winter: "Chopta turns into a white wonderland from December to March:\n\n• **Snowfall:** Frequent snow blockades roads between Chopta and Ukhimath. Drive with caution.\n• **Homestays:** Most homestays utilize fireplace wood heating. Ensure you book a Deluxe room with warm insulation.\n• **Tungnath Trek:** The trek is fully covered in deep snow. Guided trekking with snow spikes is mandatory."
-  };
+  const handleSendMessage = async (textToSend) => {
+    if (!textToSend.trim() || isTyping) return;
 
-  const handleSelectQuestion = (qText, key) => {
-    // Append user query
+    const userText = textToSend.trim();
+    
+    // Add user message
     const userMsg = {
       id: "user-" + Date.now(),
       sender: "user",
-      text: qText,
+      text: userText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    
-    setMessages(prev => [...prev, userMsg]);
+
+    // Update state to include user message and show typing loader
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    setInputValue("");
     setIsTyping(true);
 
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ messages: updatedMessages })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Add bot response
       const botMsg = {
         id: "bot-" + Date.now(),
         sender: "bot",
-        text: answers[key] || "I'm still learning about that! You can check details with our coordination desk via the Contact Page.",
+        text: data.text || "I'm sorry, I couldn't generate a response. Please try again.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
+    } catch (err) {
+      console.error("AI service error:", err);
+      setToast({
+        message: err.message || "Failed to connect to the AI Assistant. Please check your network or API settings.",
+        type: "error"
+      });
+      
+      // Append a fallback message in the chat as well
+      const errorMsg = {
+        id: "bot-err-" + Date.now(),
+        sender: "bot",
+        text: "⚠️ Connection Failed: I couldn't reach the backend service. Please check if the server is running and GEMINI_API_KEY is configured properly.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
       setIsTyping(false);
-    }, 900);
+    }
+  };
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    handleSendMessage(inputValue);
   };
 
   return (
@@ -67,6 +126,14 @@ export default function AiPlanner() {
           <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-600 border-2 border-white text-[8px] items-center justify-center font-bold">AI</span>
         </span>
       </button>
+
+      {/* Floating Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-28 right-6 z-55 flex items-center gap-2 px-4 py-3 bg-red-500 dark:bg-red-600 text-white rounded-xl shadow-2xl animate-fade-in border border-red-400 max-w-[90vw] sm:max-w-[400px]">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <p className="text-xs font-semibold">{toast.message}</p>
+        </div>
+      )}
 
       {/* Slide-out/Overlay Chat window */}
       <div
@@ -140,23 +207,48 @@ export default function AiPlanner() {
               </div>
             </div>
           )}
+          <div ref={chatEndRef} />
         </div>
 
         {/* Preset Quick Actions */}
-        <div className="px-4 py-3 border-t border-slate-200/50 dark:border-slate-800/50 bg-white dark:bg-slate-900 shrink-0">
-          <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-2">Ask AI about Chopta:</span>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="px-4 py-2.5 border-t border-slate-200/50 dark:border-slate-800/50 bg-slate-50/70 dark:bg-slate-900/70 shrink-0">
+          <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1.5">Ask AI about Chopta:</span>
+          <div className="flex flex-wrap gap-1.5">
             {presetQuestions.map((pq) => (
               <button
                 key={pq.id}
-                onClick={() => handleSelectQuestion(pq.q, pq.id)}
-                className="text-[11px] font-medium text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 transition-all text-ellipsis overflow-hidden whitespace-nowrap"
+                onClick={() => handleSendMessage(pq.q)}
+                disabled={isTyping}
+                className="text-[10px] font-medium p-1.5 px-2.5 rounded-full border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {pq.q}
               </button>
             ))}
           </div>
         </div>
+
+        {/* Input Chat Field Form */}
+        <form 
+          onSubmit={handleFormSubmit}
+          className="px-4 py-3 border-t border-slate-200/50 dark:border-slate-800/50 bg-white dark:bg-slate-900 shrink-0 flex gap-2 items-center"
+        >
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            disabled={isTyping}
+            placeholder={isTyping ? "AI is thinking..." : "Type your travel question..."}
+            className="flex-grow text-xs px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={!inputValue.trim() || isTyping}
+            className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            aria-label="Send message"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </form>
 
         {/* Info footer */}
         <div className="bg-slate-50 dark:bg-slate-950 px-4 py-2 text-center text-[10px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-900 shrink-0 flex items-center justify-center gap-1">

@@ -1,0 +1,158 @@
+{
+	"info": {
+		"_postman_id": "4b76c8c4-1104-4c48-aa81-df96cbaa89a7",
+		"name": "Week 6 Authentication & Security",
+		"description": "Postman API collection for testing EcoStay AI's authentication, rate limiting, and JWT endpoint security.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Register User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Rishav Dev\",\n    \"email\": \"rishav.dev99@gmail.com\",\n    \"password\": \"guest123\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/auth/register",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"auth",
+						"register"
+					]
+				},
+				"description": "Registers a new user in the database. Returns a 400 error for duplicate emails, non-gmail addresses, or missing fields."
+			},
+			"response": []
+		},
+		{
+			"name": "Login User",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"if (response.token) {",
+							"    pm.environment.set(\"jwt_token\", response.token);",
+							"    console.log(\"Saved JWT Token to environment: \", response.token);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"rishav.dev99@gmail.com\",\n    \"password\": \"guest123\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"auth",
+						"login"
+					]
+				},
+				"description": "Logs in the user and automatically saves the returned JWT token to the 'jwt_token' environment variable."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Bookings (Protected)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{jwt_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/bookings",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"bookings"
+					]
+				},
+				"description": "Protected endpoint to fetch bookings. Attempting to query without a valid JWT token returns a 401 Unauthorized status."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Inquiries (Protected)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{jwt_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/inquiries",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"inquiries"
+					]
+				},
+				"description": "Protected endpoint to fetch inquiries. Requires a valid JWT token matching administrative or authenticated user scope."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

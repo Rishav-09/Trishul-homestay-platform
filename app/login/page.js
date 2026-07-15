@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
   Mail, 
@@ -39,8 +39,18 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export default function LoginPage() {
+// Custom GitHub SVG Logo Component
+const GithubIcon = () => (
+  <svg className="w-5 h-5 shrink-0 fill-current" viewBox="0 0 24 24">
+    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+  </svg>
+);
+
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get("redirect") || "/";
+
   const [activeTab, setActiveTab] = useState("signin"); // "signin" | "signup"
   
   // Form input states
@@ -54,24 +64,9 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Google Sign-In simulation states
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-
-  // Pre-seed mock users in localStorage on mount if they do not exist
-  useEffect(() => {
-    const existingUsers = localStorage.getItem("mockUsers");
-    if (!existingUsers) {
-      const initialUsers = [
-        { name: "Eco Guest", email: "guest@gmail.com", password: "guest123", isAdmin: false }
-      ];
-      localStorage.setItem("mockUsers", JSON.stringify(initialUsers));
-    }
-  }, []);
 
   // Standard Forms Handling
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -81,167 +76,88 @@ export default function LoginPage() {
       return;
     }
 
+    setIsLoading(true);
+
     if (activeTab === "signin") {
-      setIsLoading(true);
-      
-      // Simulate network delay
-      setTimeout(() => {
-        // 1. Check Admin Credentials
-        if (email.toLowerCase() === "admin@ecostay.ai") {
-          if (password === "admin123") {
-            const adminUser = {
-              name: "EcoStay Admin",
-              email: "admin@ecostay.ai",
-              isAdmin: true,
-              avatar: ""
-            };
-            localStorage.setItem("user", JSON.stringify(adminUser));
-            window.dispatchEvent(new Event("user-auth"));
-            setSuccess("Admin Login Successful! Redirecting to Dashboard...");
-            setTimeout(() => {
-              router.push("/admin");
-            }, 1000);
-          } else {
-            setError("Incorrect password for Administrator.");
-            setIsLoading(false);
-          }
-          return;
-        }
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        });
 
-        // 2. Regular User: Gmail Check
-        if (!email.toLowerCase().endsWith("@gmail.com")) {
-          setError("Access Denied: Standard users must log in using a @gmail.com address.");
-          setIsLoading(false);
-          return;
-        }
-
-        // Find user in local mock database
-        const users = JSON.parse(localStorage.getItem("mockUsers") || "[]");
-        const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-        if (foundUser) {
-          if (foundUser.password === password) {
-            localStorage.setItem("user", JSON.stringify({
-              name: foundUser.name,
-              email: foundUser.email,
-              isAdmin: false,
-              avatar: ""
-            }));
-            window.dispatchEvent(new Event("user-auth"));
-            setSuccess("Logged in successfully! Redirecting...");
-            setTimeout(() => {
-              router.push("/");
-            }, 1000);
-          } else {
-            setError("Incorrect password for this Gmail account.");
-            setIsLoading(false);
-          }
+        const data = await res.json();
+        
+        if (res.ok) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          window.dispatchEvent(new Event("user-auth"));
+          setSuccess("Signed in successfully! Redirecting...");
+          setTimeout(() => {
+            router.push(redirectPath);
+          }, 1000);
         } else {
-          setError("No account found with this Gmail. Please sign up first.");
+          setError(data.error || "Invalid credentials.");
           setIsLoading(false);
         }
-      }, 800);
-
+      } catch (err) {
+        console.error(err);
+        setError("Connection failed. Please try again.");
+        setIsLoading(false);
+      }
     } else {
       // Sign Up flow
       if (!name) {
         setError("Please enter your name.");
-        return;
-      }
-      if (!email.toLowerCase().endsWith("@gmail.com")) {
-        setError("Invalid email: You must register with a @gmail.com address.");
+        setIsLoading(false);
         return;
       }
       if (password.length < 6) {
         setError("Password must be at least 6 characters long.");
+        setIsLoading(false);
         return;
       }
       if (password !== confirmPassword) {
         setError("Passwords do not match.");
+        setIsLoading(false);
         return;
       }
 
-      setIsLoading(true);
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name, email, password }),
+        });
 
-      setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem("mockUsers") || "[]");
-        const userExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+        const data = await res.json();
 
-        if (userExists) {
-          setError("This Gmail address is already registered. Please sign in.");
+        if (res.ok) {
+          setSuccess("Account registered! Please sign in with your credentials.");
+          setActiveTab("signin");
+          setPassword("");
+          setConfirmPassword("");
           setIsLoading(false);
-          return;
+        } else {
+          setError(data.error || "Registration failed.");
+          setIsLoading(false);
         }
-
-        // Add new user
-        const newUser = { name, email: email.toLowerCase(), password, isAdmin: false };
-        users.push(newUser);
-        localStorage.setItem("mockUsers", JSON.stringify(users));
-
-        // Automatically log them in
-        localStorage.setItem("user", JSON.stringify({
-          name: newUser.name,
-          email: newUser.email,
-          isAdmin: false,
-          avatar: ""
-        }));
-        window.dispatchEvent(new Event("user-auth"));
-        setSuccess("Account created successfully! Welcome to EcoStay AI.");
-        setTimeout(() => {
-          router.push("/");
-        }, 1200);
-      }, 1000);
+      } catch (err) {
+        console.error(err);
+        setError("Connection failed. Please try again.");
+        setIsLoading(false);
+      }
     }
   };
 
-  // Google Sign In Simulation
-  const triggerGoogleLogin = () => {
-    setIsGoogleLoading(true);
-    // Open picker modal after a short loader delay
-    setTimeout(() => {
-      setIsGoogleLoading(false);
-      setShowGoogleModal(true);
-    }, 600);
+  // Social Login Redirects
+  const triggerOAuth = (provider) => {
+    router.push(`/oauth/consent?provider=${provider}&redirect=${encodeURIComponent(redirectPath)}`);
   };
-
-  const handleSelectGoogleAccount = (googleUser) => {
-    setShowGoogleModal(false);
-    setIsLoading(true);
-    
-    // Simulate auth token exchange
-    setTimeout(() => {
-      localStorage.setItem("user", JSON.stringify({
-        name: googleUser.name,
-        email: googleUser.email,
-        isAdmin: false,
-        avatar: googleUser.avatar
-      }));
-      window.dispatchEvent(new Event("user-auth"));
-      setSuccess(`Signed in with Google as ${googleUser.name}!`);
-      setTimeout(() => {
-        router.push("/");
-      }, 1000);
-    }, 800);
-  };
-
-  // Mock Google Accounts for Simulation Selector
-  const mockGoogleAccounts = [
-    {
-      name: "Rishav Dev",
-      email: "rishav.dev99@gmail.com",
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
-    },
-    {
-      name: "Ananya Sharma",
-      email: "ananya.sharma.travels@gmail.com",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
-    },
-    {
-      name: "Tsering Dorje",
-      email: "tsering.himalayas@gmail.com",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
-    }
-  ];
 
   return (
     <div className="relative min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 overflow-hidden bg-slate-900">
@@ -410,19 +326,12 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Remember & Help links */}
+            {/* Hint Box */}
             {activeTab === "signin" && (
               <div className="flex items-center justify-between text-xs pt-1">
-                <label className="flex items-center gap-2 text-slate-300 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-emerald-600 focus:ring-emerald-500 focus:ring-opacity-25"
-                  />
-                  <span>Remember me</span>
-                </label>
                 <div 
                   className="text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer group"
-                  onClick={() => setError("Credentials hint: Admin ID is 'admin@ecostay.ai' (pw: 'admin123'). User logins require a @gmail.com (Default mock user: guest@gmail.com / pw: guest123).")}
+                  onClick={() => setError("Credentials hint: Admin ID is 'admin@ecostay.ai' (pw: 'admin123'). User logins require a @gmail.com.")}
                 >
                   <HelpCircle className="h-3.5 w-3.5" />
                   <span>Credentials Hint?</span>
@@ -433,7 +342,7 @@ export default function LoginPage() {
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={isLoading || isGoogleLoading}
+              disabled={isLoading}
               variant="glow"
               size="lg"
               fullWidth
@@ -457,103 +366,39 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Google SSO Button */}
-          <Button
-            onClick={triggerGoogleLogin}
-            disabled={isLoading || isGoogleLoading}
-            variant="secondary"
-            size="lg"
-            fullWidth
-            className="bg-white hover:bg-slate-50 text-slate-800 border-slate-200 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-800"
-            icon={isGoogleLoading ? <Loader2 className="h-5 w-5 animate-spin text-slate-600" /> : <GoogleIcon />}
-          >
-            Sign In with Google
-          </Button>
-        </div>
-      </div>
-
-      {/* Simulated Google Authentication Selector Modal Overlay */}
-      {showGoogleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-100 flex flex-col">
-            
-            {/* Google Header Banner */}
-            <div className="p-6 border-b border-slate-100 text-center flex flex-col items-center">
-              <div className="mb-3">
-                {/* Visual Google logo header */}
-                <div className="flex gap-0.5 text-xl font-bold tracking-tight select-none">
-                  <span className="text-[#4285F4]">G</span>
-                  <span className="text-[#EA4335]">o</span>
-                  <span className="text-[#FBBC05]">o</span>
-                  <span className="text-[#4285F4]">g</span>
-                  <span className="text-[#34A853]">l</span>
-                  <span className="text-[#EA4335]">e</span>
-                </div>
-              </div>
-              <h3 className="text-base font-bold text-slate-800">Sign in with Google</h3>
-              <p className="text-xs text-slate-500 mt-1">to continue to <span className="font-semibold text-emerald-600">EcoStay AI</span></p>
-            </div>
-
-            {/* Google Account List */}
-            <div className="p-4 space-y-2 max-h-[300px] overflow-y-auto">
-              {mockGoogleAccounts.map((account) => (
-                <button
-                  key={account.email}
-                  onClick={() => handleSelectGoogleAccount(account)}
-                  className="w-full p-3 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 flex items-center gap-3 text-left transition-all cursor-pointer group"
-                >
-                  <img
-                    src={account.avatar}
-                    alt={account.name}
-                    className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                  />
-                  <div className="flex-grow min-w-0">
-                    <p className="text-sm font-semibold text-slate-700 group-hover:text-slate-900 truncate">
-                      {account.name}
-                    </p>
-                    <p className="text-xs text-slate-500 truncate">
-                      {account.email}
-                    </p>
-                  </div>
-                  <div className="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 group-hover:border-emerald-500 group-hover:bg-emerald-500 text-transparent group-hover:text-white transition-all text-[10px] font-bold">
-                    ✓
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Google Footer actions */}
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-              <button 
-                onClick={() => {
-                  const customName = prompt("Enter a custom Google Name:");
-                  const customEmail = prompt("Enter a custom Gmail address:");
-                  if (customName && customEmail) {
-                    if (!customEmail.toLowerCase().endsWith("@gmail.com")) {
-                      alert("Error: Custom google email must end with @gmail.com");
-                      return;
-                    }
-                    handleSelectGoogleAccount({
-                      name: customName,
-                      email: customEmail.toLowerCase(),
-                      avatar: ""
-                    });
-                  }
-                }}
-                className="text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer"
-              >
-                Use another account
-              </button>
-              <button
-                onClick={() => setShowGoogleModal(false)}
-                className="text-slate-600 hover:text-slate-800 cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
+          {/* Social Logins */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => triggerOAuth("google")}
+              disabled={isLoading}
+              className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-2xl font-semibold text-sm transition-all duration-300 shadow-sm cursor-pointer"
+            >
+              <GoogleIcon />
+              <span>Google</span>
+            </button>
+            <button
+              onClick={() => triggerOAuth("github")}
+              disabled={isLoading}
+              className="flex items-center justify-center gap-2 p-3 bg-slate-950 hover:bg-slate-900 text-white border border-slate-800 rounded-2xl font-semibold text-sm transition-all duration-300 shadow-sm cursor-pointer"
+            >
+              <GithubIcon />
+              <span>GitHub</span>
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[90vh] flex items-center justify-center bg-slate-900">
+        <Loader2 className="h-10 w-10 animate-spin text-emerald-400" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

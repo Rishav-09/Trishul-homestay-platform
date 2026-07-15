@@ -15,33 +15,42 @@ export default function Contact() {
   });
   
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError(null);
 
-    // Create a new inquiry object
-    const newInquiry = {
-      id: "inq-" + Date.now(),
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      subject: formData.subject,
-      message: formData.message,
-      createdAt: new Date().toLocaleString(),
-    };
+    try {
+      const res = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
+      });
 
-    // Store in localStorage for the Admin Dashboard to pick up
-    const existing = JSON.parse(localStorage.getItem("contactInquiries") || "[]");
-    localStorage.setItem("contactInquiries", JSON.stringify([newInquiry, ...existing]));
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to submit inquiry");
+      }
 
-    setSubmitted(true);
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "Homestay Booking Enquiry",
-      message: ""
-    });
+      setSubmitted(true);
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        subject: "Homestay Booking Enquiry",
+        message: ""
+      });
+    } catch (error) {
+      console.error("Inquiry error:", error);
+      setSubmitError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const localTeam = [
@@ -253,15 +262,22 @@ export default function Contact() {
                   />
                 </div>
 
+                {submitError && (
+                  <div className="p-3 mb-4 bg-red-500/10 text-red-500 rounded-xl text-xs font-medium border border-red-500/20">
+                    {submitError}
+                  </div>
+                )}
+
                 {/* Submit button */}
                 <Button
                   type="submit"
                   variant="glow"
                   size="lg"
                   fullWidth
+                  disabled={isSubmitting}
                   icon={<Send className="h-4.5 w-4.5" />}
                 >
-                  Send Direct Inquiry
+                  {isSubmitting ? "Sending..." : "Send Direct Inquiry"}
                 </Button>
 
                 <span className="text-[10px] text-slate-400 block text-center mt-2">
